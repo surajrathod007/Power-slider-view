@@ -83,8 +83,17 @@ class PowerSliderView : View {
 
 
     //vector drawables
+    private var vectorArrowUp: Drawable? = null
     private var vectorRestart: Drawable? = null
     private var drawableSize: Int = 0
+
+    private var vectorArrowUpTopLimit = 0   //it is changing for animation
+    private var vectorArrowUpBottomLimit = 0
+
+    private var initialVectorArrowUpTopLimit = 0
+
+    private var vectorTopArrowAnimator: ValueAnimator? = null
+
 
 
     constructor(context: Context) : super(context) {
@@ -116,6 +125,7 @@ class PowerSliderView : View {
         circlePaint.style = Paint.Style.FILL
         //Load the vector drawable
         vectorRestart = ContextCompat.getDrawable(context, R.drawable.baseline_sync_24)
+        vectorArrowUp = ContextCompat.getDrawable(context, R.drawable.baseline_keyboard_arrow_up_24)
     }
 
     @SuppressLint("DrawAllocation")
@@ -181,6 +191,8 @@ class PowerSliderView : View {
         drawableSize = mCircleRadius.toInt()
         drawRestartVector(canvas)
 
+        drawArrowUpVectors(canvas)
+
         // Draw top gradient
         canvas.drawRect(0f, -(mHeight ?: 0f), mWidth ?: 0f, mHeight ?: 0f, topPaint)
 
@@ -193,6 +205,122 @@ class PowerSliderView : View {
             "SURAJPAINT",
             "Total width : $width\nTotal height : $height\nRadius : $mCircleRadius\nCenter X : $centerX\nCenterY : $mCircleCenterY\n Psddding bottmm : $paddingBottom\nTop limit : $mTopLimit"
         )
+    }
+
+    private fun drawArrowUpVectors(canvas: Canvas) {
+        val topBoundary = drawableSize * 2 //the refresh circles size -> top boundary
+        val bottomBoundary = mCenterPoint - mCircleRadius //initial center circle top
+        val drawableSize = (drawableSize * 60) / 100    //the size of each drawable
+        val drawableSpacing = 0 //spacing would be 20% of original drawable size
+        val totalSumOfDrawableIncludingSpace = (drawableSize * 3) + drawableSpacing * 2
+
+
+        val limits =
+            getLimitsForUpVectors(topBoundary, bottomBoundary, totalSumOfDrawableIncludingSpace)
+
+        initialVectorArrowUpTopLimit = limits.first
+
+        //setting this if it is first time other time it will be update from animator
+        if(vectorArrowUpTopLimit==0){
+            vectorArrowUpTopLimit = limits.first
+        }
+        vectorArrowUpBottomLimit = limits.second
+        //val bottomLimit = topLimit + totalSumOfDrawableIncludingSpace
+
+//        logE(
+//            "SURAJARROW",
+//            "Top : $topBoundary bottomBoundary : $bottomBoundary Drawable size : $drawableSize Total sum : ${(drawableSize * 3) + drawableSpacing * 2} \n top limit : $topLimit bottom limit : $bottomLimit"
+//        )    //218 to 1000
+        val left = (width - drawableSize) / 2
+        val right = left + drawableSize
+        // Calculate top and bottom coordinates to center vertically
+        val top = vectorArrowUpTopLimit
+        val bottom = top + drawableSize
+
+        // Calculate the y-coordinate for the top of the first rectangle
+        val startY1 = vectorArrowUpTopLimit
+        // Calculate the y-coordinate for the top of the second rectangle
+        val startY2 = startY1 + drawableSize + drawableSpacing
+        // Calculate the y-coordinate for the top of the third rectangle
+        val startY3 = startY2 + drawableSize + drawableSpacing
+
+//        logE(
+//            "SURAJARROW",
+//            "start1 $startY1 start2 $startY2 start3 $startY3 Spacing $drawableSpacing Drawable size $drawableSize"
+//        )
+
+        logE(
+            "SURAJARROW",
+            "start1 $startY1 start2 $startY2 start3 $startY3 alpha ${mapValueToAlphaTopArrow(vectorArrowUpTopLimit)}"
+        )
+
+        if(mCircleCenterY>mCenterPoint){
+            vectorArrowUp?.alpha = getVectorArrowUpAlpha()
+        }else{
+            vectorArrowUp?.alpha = mapValueToAlphaTopArrow(vectorArrowUpTopLimit)
+        }
+
+        vectorArrowUp?.setBounds(left, startY1, right, startY1 + drawableSize)
+        vectorArrowUp?.draw(canvas)
+
+        vectorArrowUp?.setBounds(left, startY2, right, startY2 + drawableSize)
+        vectorArrowUp?.draw(canvas)
+
+        vectorArrowUp?.setBounds(left, startY3, right, startY3 + drawableSize)
+        vectorArrowUp?.draw(canvas)
+
+        val isRunning = vectorTopArrowAnimator?.isRunning ?: false
+        if (!isRunning) {
+            vectorTopArrowAnimator = ValueAnimator.ofFloat(
+                vectorArrowUpBottomLimit.toFloat(),
+                initialVectorArrowUpTopLimit.toFloat()
+            ).apply {
+                this.duration = 1000
+                interpolator = DecelerateInterpolator() // Use any interpolator you like
+                repeatCount = ValueAnimator.INFINITE
+                addUpdateListener { valueAnimator ->
+                    val animatedValue = valueAnimator.animatedValue as Float
+                    vectorArrowUpTopLimit = animatedValue.toInt()
+                    invalidate()
+                }
+            }
+            vectorTopArrowAnimator?.start()
+        }
+    }
+
+    private fun mapValueToAlphaTopArrow(value: Int): Int {
+        val minAlpha = 0
+        val maxAlpha = 255
+        /*
+            normal case => 500 -> 0    == 0 -> 250 , 250 -> 500
+            dynamic case => bottomLim -> topLim == topLim -> botttom+top/2 , bottom+top/2 ->bottom
+         */
+        val bottomHalf = (vectorArrowUpBottomLimit+initialVectorArrowUpTopLimit)/2
+        return when {
+            value  < bottomHalf -> mapValue(value, initialVectorArrowUpTopLimit, bottomHalf, minAlpha, maxAlpha)
+            else -> mapValue(value, bottomHalf, vectorArrowUpBottomLimit, maxAlpha, minAlpha)
+        }
+    }
+
+    private fun mapValue(value: Int, start1: Int, stop1: Int, start2: Int, stop2: Int): Int {
+        return (start2 + (stop2 - start2) * ((value - start1).toFloat() / (stop1 - start1).toFloat())).toInt()
+    }
+
+    private fun getLimitsForUpVectors(
+        topBoundary: Int,
+        bottomBoundary: Float,
+        middlePointCounts: Int
+    ): Pair<Int, Int> {
+        val points = (topBoundary..bottomBoundary.toInt()).toList()
+        // Find the index of the middle point
+        val middleIndex = points.size / 2
+
+        // Extract the middle size events
+        val middlePoints = points.subList(
+            middleIndex - (middlePointCounts / 2),
+            middleIndex + (middlePointCounts / 2)
+        )
+        return Pair(middlePoints.first(), middlePoints.last())
     }
 
     private fun drawRestartVector(canvas: Canvas) {
@@ -221,6 +349,18 @@ class PowerSliderView : View {
     }
 
     private fun getRestartVectorAlpha(): Int { // Define the range of values
+        val minValue = mBottomLimit
+        val maxValue = mCenterPoint
+
+        // Define the range of alpha values
+        val minAlpha = 255f
+        val maxAlpha = 0f
+
+        // Calculate the alpha based on linear interpolation
+        return (minAlpha + (maxAlpha - minAlpha) * (1 - (mCircleCenterY - minValue) / (maxValue - minValue))).toInt()
+    }
+
+    private fun getVectorArrowUpAlpha(): Int { // Define the range of values
         val minValue = mBottomLimit
         val maxValue = mCenterPoint
 
@@ -309,14 +449,6 @@ class PowerSliderView : View {
         }
     }
 
-    private fun getExpectedYForSampleShader(): Float {
-        val newValue = mCenterPoint - mCircleCenterY
-        return if (mCircleCenterY <= mCenterPoint) {
-            ((newValue * (mHeight ?: 0f)) / mCenterPoint) + mCenterPoint
-        } else {
-            0f
-        }
-    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
