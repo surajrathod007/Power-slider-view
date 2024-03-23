@@ -70,6 +70,8 @@ class PowerSliderView : View {
     private val bottomGradientStartColor = Color.parseColor("#ca3144")
     private val bottomGradientEndColor = Color.TRANSPARENT
 
+    //Define text variables
+    private var textHeight = 0f
 
     //Capsule
     private val capsulePaint = Paint().apply {
@@ -112,8 +114,6 @@ class PowerSliderView : View {
         super.onDraw(canvas)
 
 
-
-
         if (mWidth == null) {
             mWidth = width.toFloat()
         }
@@ -122,8 +122,8 @@ class PowerSliderView : View {
         }
         mCenterPoint = (mHeight ?: 0f) / 2
 
-        mTopLimit = (width / 2).toFloat()
-        mBottomLimit = (height - (width / 2)).toFloat()
+        mTopLimit = (width / 2).toFloat() + textHeight
+        mBottomLimit = (height - (width / 2)).toFloat() - textHeight
 
         mInitialCenterY = (mHeight ?: 0f) / 2
 
@@ -176,6 +176,12 @@ class PowerSliderView : View {
 
         canvas.drawRect(0f,-(mHeight?:0f),mWidth ?: 0f,mHeight?:0f,samplePaint)*/
 
+        //draw texts
+        //canvas.drawText("Restart")
+/*        canvas.drawText("Restart",0f,textHeight,Paint().apply {
+            color = Color.BLUE
+            textSize = textHeight/2
+        })*/
         drawCapsule(canvas)
 
         // Draw top gradient
@@ -202,7 +208,7 @@ class PowerSliderView : View {
         val radius = capsuleWidth / 2
 
         // Draw the main body of the capsule (rectangle)
-        canvas.drawRect(0f, radius, capsuleWidth, (capsuleHeight ?: 0f) - radius, capsulePaint)
+        canvas.drawRect(0f, radius+textHeight, capsuleWidth, (capsuleHeight ?: 0f) - radius-textHeight, capsulePaint)
 
         //draw top circle
         canvas.drawCircle(capsuleWidth / 2, mTopLimit, radius, capsulePaint)
@@ -212,7 +218,7 @@ class PowerSliderView : View {
 
         val clipCapsulePath = Path().apply {
             addCircle(capsuleWidth / 2, mTopLimit, radius, Path.Direction.CW)
-            addRect(0f, radius, capsuleWidth, (capsuleHeight ?: 0f) - radius, Path.Direction.CW)
+            addRect(0f, radius+textHeight, capsuleWidth, (capsuleHeight ?: 0f) - radius-textHeight, Path.Direction.CW)
             addCircle(capsuleWidth / 2, mBottomLimit, radius, Path.Direction.CW)
         }
         canvas.clipPath(clipCapsulePath)
