@@ -11,6 +11,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Region
 import android.graphics.Shader
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -18,6 +19,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import androidx.core.content.ContextCompat
 
 
 class PowerSliderView : View {
@@ -30,8 +32,7 @@ class PowerSliderView : View {
     }
 
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val path = Path()
+    private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
 
     private var mWidth: Float? = null
@@ -80,6 +81,12 @@ class PowerSliderView : View {
         style = Paint.Style.FILL // Fill the shape
     }
 
+
+    //vector drawables
+    private var vectorRestart: Drawable? = null
+    private var drawableSize: Int = 0
+
+
     constructor(context: Context) : super(context) {
         init()
     }
@@ -105,8 +112,10 @@ class PowerSliderView : View {
     }
 
     private fun init() {
-        paint.color = Color.WHITE // Set color to green
-        paint.style = Paint.Style.FILL
+        circlePaint.color = Color.WHITE // Set color to green
+        circlePaint.style = Paint.Style.FILL
+        //Load the vector drawable
+        vectorRestart = ContextCompat.getDrawable(context, R.drawable.baseline_sync_24)
     }
 
     @SuppressLint("DrawAllocation")
@@ -136,7 +145,8 @@ class PowerSliderView : View {
             mCircleCenterY = mHeight!! / 2
         }
         //val centerY = height / 2
-        mCircleRadius = (width / 2).toFloat() - (((width / 2).toFloat()*20)/100)    //20 % spacing pading for circle
+        mCircleRadius =
+            (width / 2).toFloat() - (((width / 2).toFloat() * 20) / 100)    //20 % spacing pading for circle
 
         circleDiameter = mCircleRadius / 2
 
@@ -164,36 +174,80 @@ class PowerSliderView : View {
         val bottomPaint = Paint()
         bottomPaint.shader = bottomShader
 
-        /*val sampleShader  = LinearGradient(
-            0f, 0f, 0f, (mHeight?:0f)+mCenterPoint,
-            topGradientStartColor, topGradientEndColor, Shader.TileMode.CLAMP
-        )
-
-        val samplePaint = Paint()
-        //samplePaint.color = Color.MAGENTA
-        samplePaint.shader = sampleShader
-
-
-        canvas.drawRect(0f,-(mHeight?:0f),mWidth ?: 0f,mHeight?:0f,samplePaint)*/
-
-        //draw texts
-        //canvas.drawText("Restart")
-/*        canvas.drawText("Restart",0f,textHeight,Paint().apply {
-            color = Color.BLUE
-            textSize = textHeight/2
-        })*/
+        //draw the capsule
         drawCapsule(canvas)
+
+        //draw the vectors
+        drawableSize = mCircleRadius.toInt()
+        drawRestartVector(canvas)
 
         // Draw top gradient
         canvas.drawRect(0f, -(mHeight ?: 0f), mWidth ?: 0f, mHeight ?: 0f, topPaint)
+
         // Draw bottom
         canvas.drawRect(0f, 0f, mWidth ?: 0f, mHeight ?: 0f, bottomPaint)
-        //canvas.drawRect(RectF(100f,100f,100f,100f),paint)
-        canvas.drawCircle(centerX.toFloat(), mCircleCenterY, mCircleRadius, paint)
+
+        //draw our circle
+        canvas.drawCircle(centerX.toFloat(), mCircleCenterY, mCircleRadius, circlePaint)
         logE(
             "SURAJPAINT",
-            "Total width : $width\nTotal height : $height\nRadius : $mCircleRadius\nCenter X : $centerX\nCenterY : $mCircleCenterY\n Psddding bottmm : $paddingBottom"
+            "Total width : $width\nTotal height : $height\nRadius : $mCircleRadius\nCenter X : $centerX\nCenterY : $mCircleCenterY\n Psddding bottmm : $paddingBottom\nTop limit : $mTopLimit"
         )
+    }
+
+    private fun drawRestartVector(canvas: Canvas) {
+        val left = (width - drawableSize) / 2
+        val right = left + drawableSize
+        // Calculate top and bottom coordinates to center vertically
+        val top = drawableSize
+        val bottom = top + drawableSize
+        vectorRestart?.setBounds(left, top, right, bottom)
+        vectorRestart?.alpha = getRestartVectorAlpha()
+
+        // Save the canvas state
+        canvas.save()
+        // Rotate the canvas
+        canvas.rotate(
+            getRotationAngle(),
+            (mWidth ?: 0f) / 2,
+            mCircleRadius + (mCircleRadius / 2)
+        )    //take center of drawable and rotate from there
+
+        // Draw the vector drawable onto the canvas
+        vectorRestart?.draw(canvas)
+
+        // Restore the canvas state
+        canvas.restore()
+    }
+
+    private fun getRestartVectorAlpha(): Int { // Define the range of values
+        val minValue = mBottomLimit
+        val maxValue = mCenterPoint
+
+        // Define the range of alpha values
+        val minAlpha = 255f
+        val maxAlpha = 0f
+
+        // Calculate the alpha based on linear interpolation
+        return (minAlpha + (maxAlpha - minAlpha) * (1 - (mCircleCenterY - minValue) / (maxValue - minValue))).toInt()
+    }
+
+    private fun getRotationAngle(): Float {
+        //we used Linear interpolation to determine appropriate degree based on two known range
+        //if user swipe up then and then only send rotation value otherwise send 0, that means no rotation
+        // Define the range of values
+        return if (mCircleCenterY < mCenterPoint) {
+            val minValue = mTopLimit
+            val maxValue = mCenterPoint
+            // Define the range of degrees
+            val minDegree = 360f
+            val maxDegree = 0f
+            val rotationAngle =
+                minDegree + (maxDegree - minDegree) * (1 - (mCircleCenterY - minValue) / (maxValue - minValue))
+            rotationAngle
+        } else {
+            0f
+        }
     }
 
     private fun drawCapsule(canvas: Canvas) {
@@ -208,7 +262,13 @@ class PowerSliderView : View {
         val radius = capsuleWidth / 2
 
         // Draw the main body of the capsule (rectangle)
-        canvas.drawRect(0f, radius+textHeight, capsuleWidth, (capsuleHeight ?: 0f) - radius-textHeight, capsulePaint)
+        canvas.drawRect(
+            0f,
+            radius + textHeight,
+            capsuleWidth,
+            (capsuleHeight ?: 0f) - radius - textHeight,
+            capsulePaint
+        )
 
         //draw top circle
         canvas.drawCircle(capsuleWidth / 2, mTopLimit, radius, capsulePaint)
@@ -216,9 +276,16 @@ class PowerSliderView : View {
         //draw bottom circle
         canvas.drawCircle(capsuleWidth / 2, mBottomLimit, radius, capsulePaint)
 
+        //clip the capsule shape so our gradient will be drawn withing capsule not in rectangle ;)
         val clipCapsulePath = Path().apply {
             addCircle(capsuleWidth / 2, mTopLimit, radius, Path.Direction.CW)
-            addRect(0f, radius+textHeight, capsuleWidth, (capsuleHeight ?: 0f) - radius-textHeight, Path.Direction.CW)
+            addRect(
+                0f,
+                radius + textHeight,
+                capsuleWidth,
+                (capsuleHeight ?: 0f) - radius - textHeight,
+                Path.Direction.CW
+            )
             addCircle(capsuleWidth / 2, mBottomLimit, radius, Path.Direction.CW)
         }
         canvas.clipPath(clipCapsulePath)
