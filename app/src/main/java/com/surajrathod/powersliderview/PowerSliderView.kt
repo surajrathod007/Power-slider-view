@@ -87,6 +87,7 @@ class PowerSliderView : View {
     private var vectorArrowDown: Drawable? = null
     private var vectorRestart: Drawable? = null
     private var vectorPower: Drawable? = null
+    private var vectorVerticalBar: Drawable? = null
     private var drawableSize: Int = 0
 
     //arrow up
@@ -107,6 +108,15 @@ class PowerSliderView : View {
     //imp variable for down arrow
     private var totalDistanceForDownArrow = 0
     private var expectedAnimationTopLimitForBottomArrow = 0
+
+    //vertical bar
+    private var verticalBarInitialTop = 0
+    private var verticalBarInitialBottom = 0f
+    private var verticalBarYOffset = 0
+
+    private var originalBottomRange = 0
+    private var originalTopRange = 0
+    private var initialTopRange = 0
 
     constructor(context: Context) : super(context) {
         init()
@@ -138,9 +148,10 @@ class PowerSliderView : View {
         //Load the vector drawable
         vectorRestart = ContextCompat.getDrawable(context, R.drawable.baseline_sync_24)
         vectorArrowUp = ContextCompat.getDrawable(context, R.drawable.baseline_keyboard_arrow_up_24)
-        vectorPower = ContextCompat.getDrawable(context, R.drawable.baseline_power_settings_new_24)
+        vectorPower = ContextCompat.getDrawable(context, R.drawable.half_power_svg)
         vectorArrowDown =
             ContextCompat.getDrawable(context, R.drawable.baseline_keyboard_arrow_down_24)
+        vectorVerticalBar = ContextCompat.getDrawable(context, R.drawable.vertical_bar_svg)
     }
 
     @SuppressLint("DrawAllocation")
@@ -207,6 +218,7 @@ class PowerSliderView : View {
             ((mCircleRadius * 80) / 100).toInt() //80 % of circle radius old value was mCircleRadius
         drawRestartVector(canvas)
         drawPowerVector(canvas)
+        drawVerticalBar(canvas)
 
 
         drawArrowUpVectors(canvas)
@@ -226,6 +238,7 @@ class PowerSliderView : View {
         )
     }
 
+
     private fun drawPowerVector(canvas: Canvas) {
         val left = (width - drawableSize) / 2
         val right = left + drawableSize
@@ -238,6 +251,28 @@ class PowerSliderView : View {
             vectorPower?.alpha = getBottomVectorAlpha()
         }
         vectorPower?.draw(canvas)
+    }
+
+    private fun drawVerticalBar(canvas: Canvas) {
+        val left = (width - drawableSize) / 2
+        val right = left + drawableSize
+        // Calculate top and bottom coordinates to center vertically
+
+        val newDrawableSize = (drawableSize * 115) / 100
+
+        originalBottomRange = ((mHeight ?: 0f) - drawableSize).toInt()
+        originalTopRange = (originalBottomRange - drawableSize)
+
+        initialTopRange = originalBottomRange - newDrawableSize
+
+        verticalBarYOffset = getVerticalBarOffset()
+
+
+        vectorVerticalBar?.setBounds(left, verticalBarYOffset, right, verticalBarYOffset + drawableSize)
+        if (mCircleCenterY < mCenterPoint) {
+            vectorVerticalBar?.alpha = getBottomVectorAlpha()
+        }
+        vectorVerticalBar?.draw(canvas)
     }
 
     private fun drawArrowUpVectors(canvas: Canvas) {
@@ -513,6 +548,23 @@ class PowerSliderView : View {
         } else {
             0f
         }
+    }
+
+
+    private fun getVerticalBarOffset(): Int {
+        return if (mCircleCenterY > mCenterPoint) {
+            val minValue = mBottomLimit
+            val maxValue = mCenterPoint
+            // Define the range of degrees
+            val minDegree = initialTopRange
+            val maxDegree = originalTopRange
+            val rotationAngle =
+                minDegree + (maxDegree - minDegree) * (1 - (mCircleCenterY - minValue) / (maxValue - minValue))
+            rotationAngle.toInt()
+        } else {
+            initialTopRange
+        }
+
     }
 
     private fun drawCapsule(canvas: Canvas) {

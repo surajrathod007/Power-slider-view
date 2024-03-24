@@ -1,7 +1,11 @@
 package com.surajrathod.powersliderview
 
+import android.animation.Animator
+import android.animation.ObjectAnimator
+import android.graphics.drawable.AnimatedVectorDrawable
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.surajrathod.powersliderview.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -11,8 +15,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        setupClickListeners()
         setupListeners()
     }
 
@@ -36,10 +38,5 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupClickListeners() {
-        binding.btnStart.setOnClickListener {
-            binding.sampleView.startAnimation()
-        }
-    }
 
 }
