@@ -13,6 +13,27 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupClickListeners()
+        setupListeners()
+    }
+
+    private fun setupListeners() {
+        binding.powerView.setOnCheckChangedListener(object : PowerSliderView.OnCheckChangedListener {
+            override fun onCheckChanged(state: Int) {
+                when(state){
+                    PowerSliderView.STATE_IDLE ->{
+                        binding.txtLblAns.text = "Idle state"
+                    }
+
+                    PowerSliderView.STATE_TOP_SELECTED ->{
+                        binding.txtLblAns.text = "Top selected"
+                    }
+
+                    PowerSliderView.STATE_BOTTOM_SELECTED ->{
+                        binding.txtLblAns.text = "Bottom selected"
+                    }
+                }
+            }
+        })
     }
 
     private fun setupClickListeners() {

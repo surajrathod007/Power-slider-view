@@ -6,6 +6,18 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <TextView
+        android:layout_marginTop="22dp"
+        android:id="@+id/txtLblAns"
+        android:text="Idle state"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
     <com.surajrathod.powersliderview.SampleView
         android:visibility="gone"
         android:id="@+id/sampleView"
@@ -18,8 +30,10 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.surajrathod.powersliderview.PowerSliderView
+        android:id="@+id/powerView"
         android:layout_width="100dp"
         android:layout_height="0dp"
+        android:layout_marginVertical="120dp"
         android:paddingBottom="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
